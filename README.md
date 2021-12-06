@@ -1,3 +1,4 @@
+![img](https://jobtrenurtika.files.wordpress.com/2015/08/6.jpg?w=640)
 # Telkom Stocks Analysis
 > A time series analysis project using stocks data from Telkom, an Indonesian multinational telecommunications conglomerate.
 
@@ -9,8 +10,8 @@ After finishing Kaggle's amazing time series course, it only make sense to pick 
 ### Methods Used
 * Web Scraping
 * Time Series Data Preprocessing
-* Time Series Data Visualization (Moving Averages, Decompostion, Correlation)
-* Long Short-Term Memory Neural Networks 
+* Time Series Data Visualization 
+* Stacked Long Short-Term Memory Neural Networks 
 
 ### Technologies
 * Python
@@ -25,8 +26,38 @@ The Telkom stocks data was scraped using Beatiful Soup from the [Yahoo Finance w
 
 
 ## Preprocessing
+The data from the web scraping script produced a decently clean data. However, there are still several missing values from the `value` column originating from the Yahoo Finance site itself. I decided to simply rows which has a null entry on `value`, resulting in only a 4.7% loss of data. The stocks data also comes in IDR or Indonesian Rupiah, which has quite the unconventional use of commas and decimal points. The function below will parse or convert IDR values to recognizable integers that can easily be processed. 
+```python
+def idr_parser(cur_str):
+    cur_str = re.sub("[,]", '', cur_str)
+ 
+    if '.' in list(cur_str[-3:]):
+        return cur_str[:-3]
+    
+    return cur_str
+```
+## Visualization
+For the data visualization, I constructed distribution plots of each features and also explored the full historical data in the 5 year span. Moving averages plots (on various window lengths) and seasonal decomposition plots are also constructed since it is a time series data after all. All of the plots are displayed in the [notebook](https://github.com/anantoj/telkom-stocks-analysis/blob/main/telkom_stock_notebook.ipynb).
 
 ## LSTMs
+Recurrent Neural Networks is undoubtedly the most suitable type of neural network to handle time series data due to their ability to retain a memory of past inputs. LSTMs is essentially just a better version of vanilla RNNs due to the cell states that allows information to be removed or added at will. Essentially, LSTMs is far better at retaining memory and is insensitive to gap length, which is quite important considering the many data points we will input. Stacked LSTMs, on the other hand, increases depth by adding multiple hidden LSTM layers in the architecture, which allows for better learning capabilities and accuracy. After experimenting with both vanilla LSTMs and stacked LSTMs on the stocks data, stacked LSTMs were (more often than not) able to marginally produce better results. The code snippet below shows the details of the stacked LSTM architecture, as well as the optimizer and loss function used in the training pipeline.
+```python
+lstm = Sequential()
+lstm.add(LSTM(128, return_sequences=True, input_shape=(step,1)))
+lstm.add(LSTM(64, return_sequences=False))
+lstm.add(Dense(25))
+lstm.add(Dense(1))
 
+lstm.compile(
+    optimizer='adam',
+    loss='mean_squared_error',
+    metrics=[tensorflow.keras.metrics.MeanSquaredError(),
+             tensorflow.keras.metrics.RootMeanSquaredError()]
+)
+```
+The stacked LSTM was then trained for 10 epochs 
 ## Result
+After training was completed, the model was used to predict the test set and produced an Root Mean Squared error of approximately 70, which is quite an outstandingly low figure considering our data ranges between the 2000 and 4000 area. 
+
+The predictions of the model on both the training and test set plotted against the actual data is also displayed below.
 ![png](result.png)
